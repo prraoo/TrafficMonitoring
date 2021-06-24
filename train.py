@@ -13,6 +13,10 @@ from torchsummary import summary
 # Construct argument parser
 ap = argparse.ArgumentParser()
 ap.add_argument("--mode", required=True, help="Training mode: finetue/transfer/scratch")
+ap.add_argument("--batch_size", type=int, default=8, help="Batch Size to Train")
+ap.add_argument("--num_classes", type=int, default=4, help="Number of classes")
+ap.add_argument("--epochs", type=int, default=10, help="Number of classes")
+ap.add_argument("--num_workers", type=int, default=0, help="Number of classes")
 args= vars(ap.parse_args())
 
 # Set training mode
@@ -25,13 +29,13 @@ valid_directory = 'data/test'
 PATH="vgg11.pth"
 
 # Batch size
-bs = 8
+bs = args["batch_size"]
 # Number of epochs
-num_epochs = 10
+num_epochs = args["epochs"]
 # Number of classes
-num_classes = 11
+num_classes = args["num_classes"]
 # Number of workers
-num_cpu = 0
+num_cpu = args["num_workers"]
 
 # Applying transforms to the data
 image_transforms = { 
