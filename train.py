@@ -100,7 +100,7 @@ if train_mode=='finetune':
 elif train_mode=='scratch':
     # Load a custom model - VGG11
     print("\nLoading VGG11 for training from scratch ...\n")
-    model_ft = VGG11(in_ch=3,num_classes=4)
+    model_ft = VGG11(in_ch=3, num_classes=num_classes)
 
     # Set number of epochs to a higher value
     num_epochs=100
