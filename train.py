@@ -5,7 +5,7 @@ import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from model import VGG11
+from model import VGG16
 import time, os, copy, argparse
 import multiprocessing
 from torchsummary import summary
@@ -100,7 +100,8 @@ if train_mode=='finetune':
 elif train_mode=='scratch':
     # Load a custom model - VGG11
     print("\nLoading VGG11 for training from scratch ...\n")
-    model_ft = VGG11(in_ch=3, num_classes=num_classes)
+    # model_ft = VGG11(in_ch=3, num_classes=num_classes)
+    model_ft = VGG16(n_classes=num_classes)
 
     # Set number of epochs to a higher value
     num_epochs=100
@@ -176,7 +177,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(inputs)
+                    _, outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
                     loss = criterion(outputs, labels)
 
