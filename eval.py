@@ -4,6 +4,10 @@ import torch.utils.data as data
 import multiprocessing
 from sklearn.metrics import confusion_matrix
 import sys
+import matplotlib.pyplot as plt
+import seaborn as sn
+import pdb
+
 
 # Paths for image directory and model
 EVAL_DIR=sys.argv[1]
@@ -37,7 +41,7 @@ num_classes=len(eval_dataset.classes)
 dsize=len(eval_dataset)
 
 # Class label names
-class_names=['sparse_traffic', 'dense_traffic']
+class_names=['Dense Traffic', 'Sparse Traffic']
 
 # Initialize the prediction and label lists
 predlist=torch.zeros(0,dtype=torch.long, device='cpu')
@@ -46,10 +50,11 @@ lbllist=torch.zeros(0,dtype=torch.long, device='cpu')
 # Evaluate the model accuracy on the dataset
 correct = 0
 total = 0
+
 with torch.no_grad():
     for images, labels in eval_loader:
         images, labels = images.to(device), labels.to(device)
-        outputs = model(images)
+        _, outputs = model(images)
         _, predicted = torch.max(outputs.data, 1)
 
         total += labels.size(0)
@@ -63,19 +68,26 @@ overall_accuracy=100 * correct / total
 print('Accuracy of the network on the {:d} test images: {:.2f}%'.format(dsize, 
     overall_accuracy))
 
+
 # Confusion matrix
 conf_mat=confusion_matrix(lbllist.numpy(), predlist.numpy())
 print('Confusion Matrix')
 print('-'*16)
 print(conf_mat,'\n')
 
+plt.figure(figsize = (5,5))
+heatmap = sn.heatmap(conf_mat, annot=True, cmap='coolwarm', linecolor='white', linewidths=1, xticklabels=class_names, yticklabels=class_names)
+figure = heatmap.get_figure()
+## NOTE: Change the filename
+figure.savefig('Baseline_CM.png', dpi=400)
+
 # Per-class accuracy
 class_accuracy=100*conf_mat.diagonal()/conf_mat.sum(1)
 print('Per class accuracy')
 print('-'*18)
-for label,accuracy in zip(eval_dataset.classes, class_accuracy):
-     class_name=class_names[int(label)]
-     print('Accuracy of class %8s : %0.2f %%'%(class_name, accuracy))
+
+for label, accuracy in zip(eval_dataset.classes, class_accuracy):
+     print('Accuracy of class %8s : %0.2f %%'%(label, accuracy))
 
 '''
 Sample run: python eval.py eval_ds
