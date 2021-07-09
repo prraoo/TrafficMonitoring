@@ -1,10 +1,9 @@
-import numpy as np
 import torch
-import torchvision
 from torchvision import datasets, models, transforms
 import torch.utils.data as data
 import multiprocessing
 from sklearn.metrics import confusion_matrix
+import sys
 
 # Paths for image directory and model
 EVAL_DIR=sys.argv[1]
@@ -38,7 +37,7 @@ num_classes=len(eval_dataset.classes)
 dsize=len(eval_dataset)
 
 # Class label names
-class_names=['apple','atm card','cat','banana','bangle','battery','bottle','broom','bulb','calender','camera']
+class_names=['sparse_traffic', 'dense_traffic']
 
 # Initialize the prediction and label lists
 predlist=torch.zeros(0,dtype=torch.long, device='cpu')

@@ -15,7 +15,7 @@ model = torch.load(MODEL)
 model.eval()
 
 # Class labels for prediction
-class_names=['apple','atm card','cat','banana','bangle','battery','bottle','broom','bulb','calender','camera']
+class_names=['dense_traffic','sparse_traffic']
 
 # Retreive 9 random images from directory
 files=Path(IMDIR).resolve().glob('*.*')
