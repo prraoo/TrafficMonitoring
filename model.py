@@ -100,10 +100,10 @@ class VGG16(nn.Module):
         out = self.layer4(out)
         vgg16_features = self.layer5(out)
         out = vgg16_features.view(out.size(0), -1)
-        out = self.layer6(out)
-        out = self.layer7(out)
-        out = self.layer8(out)
+        out_fc1 = self.layer6(out)
+        out_fc2 = self.layer7(out_fc1)
+        out = self.layer8(out_fc2)
 
-        return vgg16_features, out
+        return out_fc2, out
 
 
