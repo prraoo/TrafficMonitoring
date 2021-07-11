@@ -6,36 +6,40 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from model import VGG16
-import time, os, copy, argparse
+import time, os, copy
 import multiprocessing
 from torchsummary import summary
+import configargparse  
 
 # Construct argument parser
-ap = argparse.ArgumentParser()
+ap = configargparse.ArgumentParser()
 ap.add_argument("--mode", required=True, help="Training mode: finetue/transfer/scratch")
 ap.add_argument("--batch_size", type=int, default=8, help="Batch Size to Train")
 ap.add_argument("--num_classes", type=int, default=4, help="Number of classes")
 ap.add_argument("--epochs", type=int, default=10, help="Number of classes")
 ap.add_argument("--num_workers", type=int, default=0, help="Number of classes")
-args= vars(ap.parse_args())
+ap.add_argument("--adjust_imbalance", action="store_true" , help="Reweight loss based on number of classes")
+
+args = ap.parse_args()
 
 # Set training mode
-train_mode=args["mode"]
+train_mode=args.mode
 
 # Set the train and validation directory paths
-train_directory = 'data/train'
-valid_directory = 'data/test'
+train_directory = 'data/trafficNetCombined/train'
+valid_directory = 'data/trafficNetCombined/val'
+
 # Set the model save path
-PATH="vgg11.pth"
+PATH="trafficNet_reweight_combined_vgg16.pth"
 
 # Batch size
-bs = args["batch_size"]
+bs = args.batch_size
 # Number of epochs
-num_epochs = args["epochs"]
+num_epochs = args.epochs
 # Number of classes
-num_classes = args["num_classes"]
+num_classes = args.num_classes
 # Number of workers
-num_cpu = args["num_workers"]
+num_cpu = args.num_workers
 
 # Applying transforms to the data
 image_transforms = { 
@@ -133,7 +137,12 @@ summary(model_ft, input_size=(3, 224, 224))
 # print(model_ft)
 
 # Loss function
-criterion = nn.CrossEntropyLoss()
+if args.adjust_imbalance:
+    weights=[0.8, 2.5]
+    class_weights = torch.FloatTensor(weights).to(device)
+    criterion = nn.CrossEntropyLoss(class_weights)
+else:
+  criterion = nn.CrossEntropyLoss()
 
 # Optimizer 
 optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
@@ -231,6 +240,3 @@ model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
 print("\nSaving the model...")
 torch.save(model_ft, PATH)
 
-'''
-Sample run: python train.py --mode=finetue
-'''

@@ -11,11 +11,15 @@ import numpy as np
 import tqdm
 import cv2
 
+"""
+python eval.py eval_dir expt_name model_checkpoint/model.pth
+
+"""
 
 # Paths for image directory and model
 EVAL_DIR=sys.argv[1]
 exp_name=sys.argv[2]
-EVAL_MODEL='saved_models/vgg11.pth'
+EVAL_MODEL=sys.argv[3]
 
 # Load the model for evaluation
 model = torch.load(EVAL_MODEL)
@@ -98,7 +102,8 @@ print('-'*16)
 print(conf_mat,'\n')
 
 plt.figure(figsize = (5,5))
-heatmap = sn.heatmap(conf_mat, annot=True, cmap='viridis', linecolor='white', linewidths=1, xticklabels=class_names, yticklabels=class_names)
+heatmap = sn.heatmap(conf_mat, annot=True, cmap='viridis', linecolor='white', linewidths=1, xticklabels=class_names, yticklabels=class_names, fmt='d')
+
 figure = heatmap.get_figure()
 ## NOTE: Change the filename
 figure.savefig(str(exp_name)+'ConfusionMatrix.png', dpi=400)
