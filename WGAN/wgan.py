@@ -18,19 +18,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-os.makedirs("images", exist_ok=True)
+os.makedirs("WGAN/images", exist_ok=True)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
-parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
+parser.add_argument("--n_epochs", type=int, default=200000, help="number of epochs of training")
+parser.add_argument("--batch_size", type=int, default=256, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.00005, help="learning rate")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
 parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
 parser.add_argument("--img_size", type=int, default=28, help="size of each image dimension")
-parser.add_argument("--channels", type=int, default=1, help="number of image channels")
+parser.add_argument("--channels", type=int, default=3, help="number of image channels")
 parser.add_argument("--n_critic", type=int, default=5, help="number of training steps for discriminator per iter")
 parser.add_argument("--clip_value", type=float, default=0.01, help="lower and upper clip value for disc. weights")
-parser.add_argument("--sample_interval", type=int, default=400, help="interval betwen image samples")
+parser.add_argument("--sample_interval", type=int, default=2000, help="interval betwen image samples")
 opt = parser.parse_args()
 print(opt)
 
@@ -161,20 +161,30 @@ for epoch in range(opt.n_epochs):
             )
             print(loss_G.item())
             writer.add_scalar("Discriminator/loss", loss_D.item(), epoch)
-            writer.add_scalar("Generator/loss", loss_G.item(), epoch)
+            writer.add_scalar("Generator/loss", -loss_G.item(), epoch)
 
         if batches_done % opt.sample_interval == 0:
-            save_image(gen_imgs.data[:25], "images/%d.png" % batches_done, nrow=5, normalize=True)
-        batches_done += 1
-end = time.time()
+            save_image(gen_imgs.data[:25], "WGAN/images/%d.png" % batches_done, nrow=5, normalize=True)
+        if batches_done % opt.sample_interval*100 == 0:
+            torch.save(generator, "WGAN/generator_WGAN_{}.pth".format(batches_done))
+            torch.save(discriminator, "WGAN/discriminator_WGAN_{}.pth".format(batches_done))
 
+
+
+
+        batches_done += 1
+
+end = time.time()
 time_elapsed = end - start
+
 print('Training took {:.0f}m {:.0f}s.'.format(
         time_elapsed // 60, time_elapsed % 60))
 print('Models saved.')
+
 writer.flush()
-torch.save(generator, "generator_WGAN")
-torch.save(discriminator, "discriminator_WGAN")
+
+torch.save(generator, "generator_WGAN_final.pth")
+torch.save(discriminator, "discriminator_WGAN.final.pth")
 
 '''
 Runs were done with 
