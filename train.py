@@ -10,6 +10,7 @@ import time, os, copy
 import multiprocessing
 from torchsummary import summary
 import configargparse  
+from center_loss import CenterLoss
 
 # Construct argument parser
 ap = configargparse.ArgumentParser()
@@ -30,7 +31,9 @@ train_directory = 'data/trafficNetCombined/train'
 valid_directory = 'data/trafficNetCombined/val'
 
 # Set the model save path
-PATH="trafficNet_reweight_combined_vgg16.pth"
+#PATH="trafficNet_reweight_lr_scheduler_combined_vgg16.pth"
+#PATH="trafficNet_center_loss_lr_scheduler_combined_vgg16.pth"
+PATH="trafficNet_center_loss_lr_scheduler_CL_scheduler_combined_vgg16.pth"
 
 # Batch size
 bs = args.batch_size
@@ -133,7 +136,9 @@ model_ft = model_ft.to(device)
 # print('Model Summary:-\n')
 # for num, (name, param) in enumerate(model_ft.named_parameters()):
 #     print(num, name, param.requires_grad )
+
 summary(model_ft, input_size=(3, 224, 224))
+
 # print(model_ft)
 
 # Loss function
@@ -144,25 +149,32 @@ if args.adjust_imbalance:
 else:
   criterion = nn.CrossEntropyLoss()
 
+
+center_loss = CenterLoss(num_classes=args.num_classes, feat_dim=2, use_gpu=True)
+
 # Optimizer 
 optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
+optimizer_center_loss = optim.SGD(center_loss.parameters(), lr=0.005)
 
 # Learning rate decay
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=30, gamma=0.1)
+center_loss_exp_lr_scheduler = lr_scheduler.StepLR(optimizer_center_loss, step_size=30, gamma=0.1)
 
 # Model training routine 
 print("\nTraining:-\n")
-def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
+
+def train_model(model, criterion, center_loss_criterion, optimizer, optimizer_CL, scheduler, center_loss_scheduler, num_epochs=30):
     since = time.time()
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
+    alpha = 0.1
 
     # Tensorboard summary
     writer = SummaryWriter()
     
     for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('Epoch {}/{}, LR BCE: {} LR CentLoss: {}'.format(epoch, num_epochs - 1, scheduler.get_lr(), center_loss_scheduler.get_lr()))
         print('-' * 10)
 
         # Each epoch has a training and validation phase
@@ -173,6 +185,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
                 model.eval()   # Set model to evaluate mode
 
             running_loss = 0.0
+            running_center_loss = 0.0
             running_corrects = 0
 
             # Iterate over data.
@@ -182,38 +195,52 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
+                optimizer_CL.zero_grad()
 
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
                     _, outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
-                    loss = criterion(outputs, labels)
+
+                    bce_loss = criterion(outputs, labels)
+                    center_loss = center_loss_criterion(outputs, labels)
+                    loss = bce_loss + center_loss * alpha
 
                     # backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
+
                         optimizer.step()
+                        
+                        for param in center_loss_criterion.parameters():
+                            param.grad.data *= (1./alpha)
+                        optimizer_CL.step()
 
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
+                running_center_loss += center_loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
             if phase == 'train':
                 scheduler.step()
+                center_loss_scheduler.step()
 
             epoch_loss = running_loss / dataset_sizes[phase]
+            epoch_center_loss = running_center_loss / dataset_sizes[phase]
             epoch_acc = running_corrects.double() / dataset_sizes[phase]
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
+            print('{} Loss: {:.4f} Center Loss: {:.4f} Acc: {:.4f}'.format(
+                phase, epoch_loss, epoch_center_loss, epoch_acc))
 
             # Record training loss and accuracy for each phase
             if phase == 'train':
                 writer.add_scalar('Train/Loss', epoch_loss, epoch)
+                writer.add_scalar('Train/Center_Loss', epoch_center_loss, epoch)
                 writer.add_scalar('Train/Accuracy', epoch_acc, epoch)
                 writer.flush()
             else:
                 writer.add_scalar('Valid/Loss', epoch_loss, epoch)
+                writer.add_scalar('Valid/Center_Loss', epoch_center_loss, epoch)
                 writer.add_scalar('Valid/Accuracy', epoch_acc, epoch)
                 writer.flush()
 
@@ -234,7 +261,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
     return model
 
 # Train the model
-model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
+model_ft = train_model(model_ft, criterion, center_loss, optimizer_ft, optimizer_center_loss, exp_lr_scheduler, center_loss_exp_lr_scheduler,
                        num_epochs=num_epochs)
 # Save the entire model
 print("\nSaving the model...")
