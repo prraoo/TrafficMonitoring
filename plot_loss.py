@@ -24,8 +24,11 @@ mpl.rcParams['font.family'] = 'sans-serif'
 mpl.rcParams['font.sans-serif'] = 'NSimSun,Times New Roman'
 
 figure = plt.figure()
-
-gen_loss, epochs_loss_gen = read_values_csv("run-.-tag-Generator_loss.csv")
+import pdb
+pdb.set_trace()
+gen_loss, epochs_loss_gen = read_values_csv("plots/data/4.1/run-Jul16_18-17-06_gpu20-37alldata_no_LR_sch-tag-Valid_Accuracy.csv")
+gen_loss, epochs_loss_gen = read_values_csv("plots/data/4.1/run-Jul16_18-17-06_gpu20-37alldata_no_LR_sch-tag-Valid_Accuracy.csv")
+gen_loss, epochs_loss_gen = read_values_csv("plots/data/4.1/run-Jul16_18-17-06_gpu20-37alldata_no_LR_sch-tag-Valid_Accuracy.csv")
 discr_loss, epochs_loss_discr = read_values_csv("run-.-tag-Discriminator_loss.csv")
 
 

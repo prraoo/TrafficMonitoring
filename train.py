@@ -20,6 +20,10 @@ ap.add_argument("--num_classes", type=int, default=4, help="Number of classes")
 ap.add_argument("--epochs", type=int, default=10, help="Number of classes")
 ap.add_argument("--num_workers", type=int, default=0, help="Number of classes")
 ap.add_argument("--adjust_imbalance", action="store_true" , help="Reweight loss based on number of classes")
+ap.add_argument("--save_path", type=str, default='save_models/test.pth', required=True, help="path to save model")
+ap.add_argument("--comment", type=str, default='demo', required=True, help="Tensorboard directory name")
+ap.add_argument("--scheduler_step", type=int, default=30, help="Frequency at with we scale down learning rate")
+ap.add_argument("--alpha", type=int, default=0.1, help="Weight of center loss, set to 0 to turn off center loss")
 
 args = ap.parse_args()
 
@@ -31,9 +35,7 @@ train_directory = 'data/trafficNetCombined/train'
 valid_directory = 'data/trafficNetCombined/val'
 
 # Set the model save path
-#PATH="trafficNet_reweight_lr_scheduler_combined_vgg16.pth"
-#PATH="trafficNet_center_loss_lr_scheduler_combined_vgg16.pth"
-PATH="trafficNet_center_loss_lr_scheduler_CL_scheduler_combined_vgg16.pth"
+PATH=args.save_path
 
 # Batch size
 bs = args.batch_size
@@ -98,36 +100,20 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if train_mode=='finetune':
     # Load a pretrained model - Resnet18
     print("\nLoading resnet18 for finetuning ...\n")
-    model_ft = models.resnet18(pretrained=True)
+    model_ft = models.vgg16(pretrained=True)
 
     # Modify fc layers to match num_classes
     num_ftrs = model_ft.fc.in_features
-    model_ft.fc = nn.Linear(num_ftrs,num_classes )
+    model_ft.fc = nn.Linear(num_ftrs,num_classes)
 
 elif train_mode=='scratch':
     # Load a custom model - VGG11
     print("\nLoading VGG11 for training from scratch ...\n")
-    # model_ft = VGG11(in_ch=3, num_classes=num_classes)
     model_ft = VGG16(n_classes=num_classes)
 
     # Set number of epochs to a higher value
-    num_epochs=100
+    num_epochs=50
 
-elif train_mode=='transfer':
-    # Load a pretrained model - MobilenetV2
-    print("\nLoading mobilenetv2 as feature extractor ...\n")
-    model_ft = models.mobilenet_v2(pretrained=True)    
-
-    # Freeze all the required layers (i.e except last conv block and fc layers)
-    for params in list(model_ft.parameters())[0:-5]:
-        params.requires_grad = False
-
-    # Modify fc layers to match num_classes
-    num_ftrs=model_ft.classifier[-1].in_features
-    model_ft.classifier=nn.Sequential(
-        nn.Dropout(p=0.2, inplace=False),
-        nn.Linear(in_features=num_ftrs, out_features=num_classes, bias=True)
-        )    
 
 # Transfer the model to GPU
 model_ft = model_ft.to(device)
@@ -143,7 +129,7 @@ summary(model_ft, input_size=(3, 224, 224))
 
 # Loss function
 if args.adjust_imbalance:
-    weights=[0.8, 2.5]
+    weights=[0.5 , 5.0]
     class_weights = torch.FloatTensor(weights).to(device)
     criterion = nn.CrossEntropyLoss(class_weights)
 else:
@@ -153,12 +139,12 @@ else:
 center_loss = CenterLoss(num_classes=args.num_classes, feat_dim=2, use_gpu=True)
 
 # Optimizer 
-optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
+optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9, weight_decay=0.01)
 optimizer_center_loss = optim.SGD(center_loss.parameters(), lr=0.005)
 
 # Learning rate decay
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=30, gamma=0.1)
-center_loss_exp_lr_scheduler = lr_scheduler.StepLR(optimizer_center_loss, step_size=30, gamma=0.1)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=args.scheduler_step , gamma=0.2)
+center_loss_exp_lr_scheduler = lr_scheduler.StepLR(optimizer_center_loss, step_size=args.scheduler_step, gamma=0.5)
 
 # Model training routine 
 print("\nTraining:-\n")
@@ -168,10 +154,10 @@ def train_model(model, criterion, center_loss_criterion, optimizer, optimizer_CL
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
-    alpha = 0.1
+    alpha = args.alpha
 
     # Tensorboard summary
-    writer = SummaryWriter()
+    writer = SummaryWriter(comment=args.comment)
     
     for epoch in range(num_epochs):
         print('Epoch {}/{}, LR BCE: {} LR CentLoss: {}'.format(epoch, num_epochs - 1, scheduler.get_lr(), center_loss_scheduler.get_lr()))
@@ -204,7 +190,10 @@ def train_model(model, criterion, center_loss_criterion, optimizer, optimizer_CL
                     _, preds = torch.max(outputs, 1)
 
                     bce_loss = criterion(outputs, labels)
-                    center_loss = center_loss_criterion(outputs, labels)
+                    if args.alpha > 0:
+                        center_loss = center_loss_criterion(outputs, labels)
+                    else:
+                        center_loss = 0
                     loss = bce_loss + center_loss * alpha
 
                     # backward + optimize only if in training phase
@@ -212,14 +201,15 @@ def train_model(model, criterion, center_loss_criterion, optimizer, optimizer_CL
                         loss.backward()
 
                         optimizer.step()
-                        
-                        for param in center_loss_criterion.parameters():
-                            param.grad.data *= (1./alpha)
+                        if args.alpha > 0:
+                            for param in center_loss_criterion.parameters():
+                                param.grad.data *= (1./alpha)
                         optimizer_CL.step()
 
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
-                running_center_loss += center_loss.item() * inputs.size(0)
+                if args.alpha > 0:
+                    running_center_loss += center_loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
             if phase == 'train':
                 scheduler.step()
