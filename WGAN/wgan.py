@@ -191,3 +191,7 @@ Runs were done with
 
 python wgan.py --n_epochs=20000 --img_size=224 --channels=3
 '''
+'''
+The main implementation of this code has been taken from https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/wgan/wgan.py
+We added trackers for the loss and created a custom dataloader in order to fit our need for training
+'''
