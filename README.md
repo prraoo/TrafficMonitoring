@@ -44,10 +44,12 @@ tensorboard --logdir runs/
 ```
 
 ## Evaluation
-Finally to evaluate
+The final model evaluations can be done on the testset as following
 ```
-python eval.py data/test/ Demo-Results saved_models/trafficnet_full_lr_sch_center_loss_reweight_L2_reg.pth 'With LR Sch and CL' 
-``
+python eval.py data/test/ 'Demo-Results' saved_models/trafficnet_V2.pth
+```
+
+
 
 
 
