@@ -119,15 +119,15 @@ elif train_mode=='scratch':
 model_ft = model_ft.to(device)
 
 # Print model summary
-# print('Model Summary:-\n')
-# for num, (name, param) in enumerate(model_ft.named_parameters()):
-#     print(num, name, param.requires_grad )
+ print('Model Summary:-\n')
+ for num, (name, param) in enumerate(model_ft.named_parameters()):
+     print(num, name, param.requires_grad )
 
 summary(model_ft, input_size=(3, 224, 224))
 
 # print(model_ft)
 
-# Loss function
+# Loss function with weight rescaling
 if args.adjust_imbalance:
     weights=[0.5 , 5.0]
     class_weights = torch.FloatTensor(weights).to(device)
@@ -138,11 +138,11 @@ else:
 
 center_loss = CenterLoss(num_classes=args.num_classes, feat_dim=2, use_gpu=True)
 
-# Optimizer 
+# Optimizer for Cross Entropy and Center Loss
 optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9, weight_decay=0.01)
 optimizer_center_loss = optim.SGD(center_loss.parameters(), lr=0.005)
 
-# Learning rate decay
+# Learning rate decay for different optimizers
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=args.scheduler_step , gamma=0.2)
 center_loss_exp_lr_scheduler = lr_scheduler.StepLR(optimizer_center_loss, step_size=args.scheduler_step, gamma=0.5)
 

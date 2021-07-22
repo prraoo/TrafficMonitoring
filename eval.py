@@ -10,6 +10,7 @@ import pdb
 import numpy as np
 import tqdm
 import cv2
+from sklearn.manifold import TSNE
 
 """
 python eval.py eval_dir expt_name model_checkpoint/model.pth
@@ -20,7 +21,7 @@ python eval.py eval_dir expt_name model_checkpoint/model.pth
 EVAL_DIR=sys.argv[1]
 exp_name=sys.argv[2]
 EVAL_MODEL=sys.argv[3]
-
+PLOT_TITLE="Plots_" + sys.argv[2]
 # Load the model for evaluation
 model = torch.load(EVAL_MODEL)
 model.eval()
@@ -66,6 +67,9 @@ correct = 0
 total = 0
 
 with torch.no_grad():
+    """
+    The main evaluations scipt to calculate number of correct predictions
+    """
     for images, labels in eval_loader:
         images, labels = images.to(device), labels.to(device)
         n, nc, ht, wd = images.shape
@@ -77,7 +81,8 @@ with torch.no_grad():
     
         features.extend(feats.data.cpu().numpy())
         gts.extend(labels.data.cpu().numpy())
-
+        
+        ## Preprocessing to visualiize images for TSNE plots
         images_raw = images.data.cpu().numpy()
         mean = np.tile(np.array([0.485, 0.456, 0.406]), (1, 1, 1, 1)).transpose(0,3,1,2)
         std = np.tile(np.array([0.229, 0.224, 0.225]), (1, 1, 1, 1)).transpose(0,3,1,2)
@@ -89,19 +94,23 @@ with torch.no_grad():
         predlist=torch.cat([predlist,predicted.view(-1).cpu()])
         lbllist=torch.cat([lbllist,labels.view(-1).cpu()])
 
+
+### Logging Reuslts
+
 # Overall accuracy
 overall_accuracy=100 * correct / total
 print('Accuracy of the network on the {:d} test images: {:.2f}%'.format(dsize, 
     overall_accuracy))
 
 
-# Confusion matrix
+# Save Confusion matrix
 conf_mat=confusion_matrix(lbllist.numpy(), predlist.numpy())
 print('Confusion Matrix')
 print('-'*16)
 print(conf_mat,'\n')
 
 plt.figure(figsize = (5,5))
+plt.title(PLOT_TITLE, fontsize =20)
 heatmap = sn.heatmap(conf_mat, annot=True, cmap='viridis', linecolor='white', linewidths=1, xticklabels=class_names, yticklabels=class_names, fmt='d')
 
 figure = heatmap.get_figure()
@@ -116,10 +125,9 @@ print('-'*18)
 for label, accuracy in zip(eval_dataset.classes, class_accuracy):
      print('Accuracy of class %8s : %0.2f %%'%(label, accuracy))
 
-## TSNE Features:
+## Plot TSNE Features:
 #label 0 = dense and 1 = sparse
 
-from sklearn.manifold import TSNE
 colors_per_class = {'sparse_traffic' : [70, 227, 175], 'dense_traffic' : [16, 58, 254]}
 
 tsne = TSNE(n_components=2).fit_transform(np.array(features))
@@ -179,8 +187,6 @@ def plot_tsne_images(tx, ty, images, labels, plot_size=1000, max_image_size=100)
         tl_x, tl_y, br_x, br_y = compute_plot_coordinates(im, x, y, image_centers_area_size, offset)
         tsne_plot[tl_y:br_y, tl_x:br_x, :] = im.transpose(1,2,0)
 
-    # plt.imshow(tsne_plot[:,:,::-1])
-    # plt.imsave(tsne_plot[:,:,::-1])
     cv2.imwrite(str(exp_name)+"TSNE_images.png", tsne_plot)
 
 
@@ -191,7 +197,3 @@ plot_tsne_features(tx, ty, gts)
 plot_tsne_images(tx, ty, images_list, gts, 2048, 224)
 
 print("Evaluation completed")
-
-'''
-Sample run: python eval.py eval_ds
-'''

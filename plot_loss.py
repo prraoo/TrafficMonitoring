@@ -2,6 +2,11 @@ import csv
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 
+"""
+Auxliary scripts to generate plots by reading data from tensorboard
+Not part of the mail code
+"""
+
 def read_values_csv(filename):
     loss =[]
     epochs = []
