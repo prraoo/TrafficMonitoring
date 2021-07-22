@@ -34,6 +34,11 @@ python train.py \
  --comment=demo \
  --scheduler_step=10 \
 ```
+## Training WGAN
+In order to train the generator for WGAN and save it, run
+```
+python wgan.py --n_epochs=20000 --img_size=224 --channels=3
+```
 
 The model with minimum validation loss will be saved in the `saved_models` folder. In addition the training and validation progress are saved as tensorboard logs in the `runs` folder.  
 
