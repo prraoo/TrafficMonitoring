@@ -57,6 +57,7 @@ Pramod Rao, Sven Krichner, Yashaswini Kumar
 We want to acknowledge the help of following repositories where we take their implementations and build our codes and dataset
 1. Dataset: https://github.com/OlafenwaMoses/Traffic-Net
 2. VGG16: https://github.com/msyim/VGG16
+3. Center Loss: https://github.com/KaiyangZhou/pytorch-center-loss
 
 
 
