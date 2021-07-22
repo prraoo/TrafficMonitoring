@@ -58,6 +58,7 @@ We want to acknowledge the help of following repositories where we take their im
 1. Dataset: https://github.com/OlafenwaMoses/Traffic-Net
 2. VGG16: https://github.com/msyim/VGG16
 3. Center Loss: https://github.com/KaiyangZhou/pytorch-center-loss
+4. WGAN: https://github.com/eriklindernoren/PyTorch-GAN/tree/master/implementations/wgan
 
 
 
