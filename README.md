@@ -48,8 +48,15 @@ The final model evaluations can be done on the testset as following
 ```
 python eval.py data/test/ 'Demo-Results' saved_models/trafficnet_V2.pth
 ```
+## Team
 
+Pramod Rao, Sven Krichner, Yashaswini Kumar
 
+## Acknowledgements
+
+We want to acknowledge the help of following repositories where we take their implementations and build our codes and dataset
+1. Dataset: https://github.com/OlafenwaMoses/Traffic-Net
+2. VGG16: https://github.com/msyim/VGG16
 
 
 
