@@ -58,10 +58,7 @@ def train_fn(
         if idx % 10 == 0:
             loop.set_postfix(
                 D_real=torch.sigmoid(D_real).mean().item(),
-                D_fake=torch.sigmoid(D_fake).mean().item(),
-                G_loss=torch.sigmoid(G_loss).mean().item(),
-                D_loss=torch.sigmoid(D_loss).mean().item(),
-                
+                D_fake=torch.sigmoid(D_fake).mean().item(),                
             )
 
 
@@ -91,7 +88,7 @@ def main():
     g_scaler = torch.cuda.amp.GradScaler()
     d_scaler = torch.cuda.amp.GradScaler()
     val_dataset = CityDataset(root_dir=config.VAL_DIR)
-    val_loader = DataLoader(val_dataset, batch_size=10, shuffle=False)    
+    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)    
 
     for epoch in range(config.NUM_EPOCHS):
         train_fn(
